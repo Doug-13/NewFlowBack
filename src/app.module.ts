@@ -1,66 +1,31 @@
 import { Module } from '@nestjs/common'
-import { MongooseModule } from '@nestjs/mongoose'
-import { ConfigModule, ConfigService } from '@nestjs/config'
-import { APP_GUARD } from '@nestjs/core'
-import { JwtModule } from '@nestjs/jwt'
-import { JwtAuthGuard } from './common/jwt-auth.guard'
-import { AuthModule }          from './modules/auth/auth.module'
-import { UsersModule }         from './modules/users/users.module'
-import { OrganizationsModule } from './modules/organizations/organizations.module'
-import { ProcessesModule }     from './modules/processes/processes.module'
-import { MetadataModule }      from './modules/metadata/metadata.module'
-import { WorkflowModule }      from './modules/workflow/workflow.module'
-import { WorkflowsModule }     from './modules/workflows/workflows.module'
-import { DocumentsModule }     from './modules/documents/documents.module'
-import { TasksModule }         from './modules/tasks/tasks.module'
-import { EnvironmentModule }   from './modules/environment/environment.module'
-import { NotificationsModule } from './modules/notifications/notifications.module'
+import { ConfigModule } from '@nestjs/config'
+import { PrismaModule } from './prisma/prisma.module'
+import { AuthModule } from './auth/auth.module'
+import { UsersModule } from './users/users.module'
+import { OrganizationModule } from './organization/organization.module'
+import { ProcessesModule } from './processes/processes.module'
+import { DocumentsModule } from './documents/documents.module'
+import { DashboardModule } from './dashboard/dashboard.module'
+import { MetadataModule } from './metadata/metadata.module'
+import { EnvironmentSettingsModule } from './environment-settings/environment-settings.module'
+import { WorkflowsModule } from './workflows/workflows.module'
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
-
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      inject:  [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const uri = config.get<string>('MONGODB_URI')
-        console.log('🔗 Conectando ao MongoDB:', uri?.split('@')[1] ?? uri)
-        return {
-          uri,
-          connectionFactory: (connection: any) => {
-            connection.on('connected', () => console.log('✅ MongoDB conectado'))
-            connection.on('error', (err: any) => console.error('❌ MongoDB erro:', err))
-            return connection
-          },
-        }
-      },
+    ConfigModule.forRoot({
+      isGlobal: true,
     }),
-
-    JwtModule.registerAsync({
-      global:  true,
-      imports: [ConfigModule],
-      inject:  [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret:      config.get<string>('JWT_SECRET') ?? 'dev-secret',
-        signOptions: { expiresIn: config.get<string>('JWT_EXPIRES_IN') ?? '7d' },
-      }),
-    }),
-
+    PrismaModule,
     AuthModule,
     UsersModule,
-    OrganizationsModule,
+    OrganizationModule,
     ProcessesModule,
-    MetadataModule,
-    WorkflowModule,
-    WorkflowsModule,
     DocumentsModule,
-    TasksModule,
-    EnvironmentModule,
-    NotificationsModule,
-  ],
-  providers: [
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    DashboardModule,
+    MetadataModule,
+    EnvironmentSettingsModule,
+    WorkflowsModule,
   ],
 })
 export class AppModule {}

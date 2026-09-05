@@ -1,271 +1,73 @@
-# Gestão Docs API
+# NewFlowDev Back — Neon/PostgreSQL
 
-Backend NestJS + MongoDB para o sistema de gestão documental com motor de workflow dinâmico.
+Backend reconstruído em NestJS + Prisma + PostgreSQL/Neon.
 
----
+## 1. Preparar ambiente
 
-## Estrutura do projeto
+Copie `.env.example` para `.env` e informe a connection string completa do Neon:
 
-```
-src/
-├── main.ts
-├── app.module.ts
-└── modules/
-    ├── auth/
-    │   ├── dto/          auth.dto.ts
-    │   ├── schema/       user.schema.ts
-    │   ├── auth.controller.ts
-    │   ├── auth.controller.spec.ts
-    │   ├── auth.service.ts
-    │   ├── auth.service.spec.ts
-    │   └── auth.module.ts
-    ├── users/
-    │   ├── dto/          user.dto.ts
-    │   ├── schema/       user-membership.schema.ts
-    │   ├── users.controller.ts
-    │   ├── users.controller.spec.ts
-    │   ├── users.service.ts
-    │   ├── users.service.spec.ts
-    │   └── users.module.ts
-    ├── organizations/
-    │   ├── dto/          organization.dto.ts
-    │   ├── schema/       organization.schema.ts
-    │   ├── organizations.controller.ts
-    │   ├── organizations.controller.spec.ts
-    │   ├── organizations.service.ts
-    │   ├── organizations.service.spec.ts
-    │   └── organizations.module.ts
-    ├── processes/
-    │   ├── dto/          process.dto.ts
-    │   ├── schema/       process.schema.ts
-    │   ├── processes.controller.ts
-    │   ├── processes.controller.spec.ts
-    │   ├── processes.service.ts
-    │   ├── processes.service.spec.ts
-    │   └── processes.module.ts
-    ├── metadata/
-    │   ├── dto/          save-metadata.dto.ts
-    │   ├── schema/       metadata-value.schema.ts
-    │   │                 metadata-definition.schema.ts
-    │   │                 audit-log.schema.ts
-    │   ├── metadata.controller.ts
-    │   ├── metadata.controller.spec.ts
-    │   ├── metadata.service.ts
-    │   ├── metadata.service.spec.ts
-    │   └── metadata.module.ts
-    ├── workflow/
-    │   ├── workflow.service.ts        ← Motor principal
-    │   ├── workflow.service.spec.ts
-    │   └── workflow.module.ts
-    ├── documents/
-    │   ├── dto/          create-document.dto.ts
-    │   ├── schema/       document.schema.ts
-    │   ├── documents.controller.ts
-    │   ├── documents.controller.spec.ts
-    │   ├── documents.service.ts
-    │   ├── documents.service.spec.ts
-    │   └── documents.module.ts
-    └── tasks/
-        ├── dto/          execute-task.dto.ts
-        ├── schema/       task.schema.ts
-        ├── tasks.controller.ts
-        ├── tasks.controller.spec.ts
-        ├── tasks.service.ts
-        ├── tasks.service.spec.ts
-        └── tasks.module.ts
-```
-
----
-
-## senha Atlas
-TimeTop@2026
-
-N1Dwdjwlli2Xi60I
-
-mongodb+srv://equipenewflow_db_user:N1Dwdjwlli2Xi60I@cluster0.ryopfna.mongodb.net/?appName=Cluster0
-
-## Setup rápido
-
-### 1. Instalar dependências
-```bash
-npm install
-```
-
-### 2. Configurar variáveis de ambiente
-```bash
-cp .env.example .env
-```
-
-Edite o `.env`:
 ```env
-MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/gestao-docs?retryWrites=true&w=majority
-JWT_SECRET=sua-chave-secreta
-JWT_EXPIRES_IN=7d
+DATABASE_URL="postgresql://neondb_owner:SUA_SENHA@SEU_HOST-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require"
+JWT_SECRET="uma-chave-forte"
 PORT=3000
-FRONTEND_URL=http://localhost:5173
+CORS_ORIGIN="http://localhost:5173"
 ```
 
-### 3. MongoDB Atlas
-1. Acesse [cloud.mongodb.com](https://cloud.mongodb.com)
-2. Crie um cluster gratuito (M0)
-3. **Database Access** → crie usuário com senha
-4. **Network Access** → adicione `0.0.0.0/0`
-5. **Connect → Drivers** → copie a connection string
+## 2. Instalar
 
-### 4. Rodar em desenvolvimento
-```bash
+```powershell
+npm install
+npx prisma generate
+npx prisma db push
+npm run seed
 npm run start:dev
 ```
 
-### 5. Rodar testes
-```bash
-npm test
-npm run test:cov   # com coverage
-```
+## 3. Primeiro login
 
----
+Por padrão o seed cria:
 
-## Integração com o frontend React
+- E-mail: `admin@newflow.local`
+- Senha: `Admin@123`
 
-### Substituir o mockAdapter
+Troque depois do primeiro acesso.
 
-No `src/api/client.ts` do frontend, remova o `installMockAdapter` e ajuste o `baseURL`:
+Você também pode definir antes do seed:
 
-```ts
-// ANTES
-import { installMockAdapter } from './mockAdapter'
-export const api = axios.create({ baseURL: '' })
-installMockAdapter(api)
-
-// DEPOIS
-export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
-  headers: { 'Content-Type': 'application/json' },
-})
-```
-
-Adicione no `.env` do frontend:
 ```env
-VITE_API_URL=http://localhost:3000
+SEED_ADMIN_EMAIL="seu@email.com"
+SEED_ADMIN_PASSWORD="SuaSenhaForte"
 ```
 
-### Enviar steps e elementConfigs nas chamadas de workflow
+## 4. Prefixo da API
 
-Enquanto o backend não tem parser BPMN próprio, o frontend envia os steps:
+A API usa:
 
-```ts
-// Criar documento
-await api.post('/document-instances', {
-  title,
-  workflowId,
-  processId,
-  accountId,
-  initialMetadataValues,
-  steps: workflow.steps,        // ← do workflowStorage
-  elementConfigs,               // ← getElementConfigsByWorkflow(workflowId)
-})
+`http://localhost:3000/api`
 
-// Executar ação
-await api.post(`/tasks/${taskId}/execute`, {
-  action: 'approve',
-  comment: '',
-  steps: workflow.steps,
-  elementConfigs,
-})
-```
+Rotas já implementadas:
 
----
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `POST /api/auth/logout`
+- CRUD de `/api/users`
+- CRUD de `/api/organization/units`
+- CRUD de `/api/organization/areas`
+- CRUD de `/api/organization/disciplines`
+- CRUD de `/api/organization/roles`
+- CRUD de `/api/organization/groups`
+- CRUD de `/api/processes`
+- CRUD e execução de `/api/document-instances`
+- arquivos, auditoria, histórico e referências
+- `GET /api/dashboard/summary`
 
-## Rotas disponíveis
+## 5. Arquivos
 
-### Auth
-```
-POST /auth/login
-POST /auth/register
-```
+Nesta primeira base os arquivos físicos são armazenados em `/uploads` e somente os metadados ficam no PostgreSQL.
+Em produção recomenda-se trocar o adaptador por Cloudflare R2/S3/Blob Storage.
 
-### Documentos
-```
-GET    /document-instances
-GET    /document-instances/:id
-POST   /document-instances
-POST   /document-instances/:id/cancel
-DELETE /document-instances/:id
-```
+## 6. Próximos módulos
 
-### Tarefas
-```
-GET  /tasks/my
-POST /tasks/:id/execute
-```
-
-### Metadados
-```
-GET  /metadata/values/:documentId
-POST /metadata/values/:documentId
-GET  /metadataDefinitions
-POST /metadataDefinitions
-PUT  /metadataDefinitions/:id
-DELETE /metadataDefinitions/:id
-```
-
-### Usuários
-```
-GET    /users
-GET    /users/:id
-POST   /users
-PUT    /users/:id
-DELETE /users/:id
-GET    /userProcessMemberships
-POST   /userProcessMemberships
-```
-
-### Organizações
-```
-GET    /organizationAreas
-POST   /organizationAreas
-DELETE /organizationAreas/:id
-GET    /organizationRoles
-POST   /organizationRoles
-GET    /organizationGroups
-POST   /organizationGroups
-```
-
-### Processos
-```
-GET    /processes
-GET    /processes/:id
-POST   /processes
-PUT    /processes/:id
-DELETE /processes/:id
-```
-
----
-
-## Motor de workflow — fluxo de rejeição com evento condicional
-
-```
-Usuário clica "Reprovar" em "Análise Inicial"
-  ↓
-findTransition(currStep, 'reject')
-  → { triggerAction: 'reject', toStepOrderIndex: 3, intermediateEventIds: ['Event_18rq73l'] }
-  ↓
-advanceDocument()
-  → nextStep = "Ajustes De dados" (orderIndex 3)
-  → executeIntermediateEvent('Event_18rq73l', ..., destinationStep = "Ajustes De dados")
-    → kind === 'conditional'
-    → doc.revision '00' → '01'
-    → doc.currentStep = "Ajustes De dados"
-    → tarefa criada em "Ajustes De dados"
-    → metadados preservados (mesmo documento, nova revisão)
-```
-
----
-
-## Próximos passos (fase 2)
-
-- [ ] Parser BPMN no backend (sem precisar enviar steps pelo frontend)
-- [ ] Guards JWT em todas as rotas
-- [ ] Módulo de notificações por e-mail
-- [ ] Dashboard e relatórios
-- [ ] Migração para PostgreSQL + C#
+O front atual ainda possui contratos adicionais (metadados, tipos documentais, configurações de ambiente,
+templates de notificação, plataforma, tarefas, L&D e definições BPMN). Esses módulos devem ser migrados
+na continuação para completar 100% do contrato.
