@@ -93,11 +93,11 @@ export class WorkflowsService {
     }
   }
 
-  async list(accountId: string, processId?: string) {
+  async list(accountId: string, processId?: string, allowedProcessIds?: string[]) {
     const items = await this.prisma.workflows.findMany({
       where: {
         account_id: accountId,
-        ...(processId ? { process_id: processId } : {}),
+        ...(allowedProcessIds ? { process_id: { in: processId ? allowedProcessIds.filter(id => id === processId) : allowedProcessIds } } : processId ? { process_id: processId } : {}),
       },
       include: this.includeGraph(),
       orderBy: { updated_at: 'desc' },

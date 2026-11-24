@@ -1,3 +1,5 @@
+import { ResourceAccessService } from '../security/resource-access.service'
+import { ResourceAccessGuard } from '../security/resource-access.guard'
 import {
   Body,
   Controller,
@@ -13,18 +15,22 @@ import { CurrentUser } from '../auth/current-user.decorator'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { WorkflowsService } from './workflows.service'
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ResourceAccessGuard)
 @Controller('workflows')
 export class WorkflowsController {
-  constructor(private readonly service: WorkflowsService) {}
+  constructor(private readonly service: WorkflowsService, private readonly access: ResourceAccessService) {}
 
   @Get()
-  list(
+  async list(
     @Query('processId') processId: string | undefined,
     @CurrentUser() user: any,
   ) {
-    return this.service.list(user.accountId, processId)
+    const ids = String(user.role).toLowerCase() === 'admin'
+      ? undefined
+      : await this.access.availableProcessIds(user)
+    return this.service.list(user.accountId, processId, ids)
   }
+
 
   @Get(':id')
   get(@Param('id') id: string) {

@@ -1,9 +1,10 @@
+import { ResourceAccessGuard } from '../security/resource-access.guard'
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
 import { CurrentUser } from '../auth/current-user.decorator'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { DocumentGovernanceService } from './document-governance.service'
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ResourceAccessGuard)
 @Controller('document-instances/:id/governance')
 export class DocumentGovernanceController {
   constructor(private readonly service: DocumentGovernanceService) {}

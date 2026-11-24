@@ -1,3 +1,4 @@
+import { ResourceAccessGuard } from '../security/resource-access.guard'
 import {
   Body,
   Controller,
@@ -13,7 +14,7 @@ import { CurrentUser } from '../auth/current-user.decorator'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { MetadataService } from './metadata.service'
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ResourceAccessGuard)
 @Controller('metadata')
 export class MetadataController {
   constructor(private readonly service: MetadataService) {}

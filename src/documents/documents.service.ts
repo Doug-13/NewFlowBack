@@ -1,3 +1,5 @@
+import { DocumentNumberingService } from '../document-numbering/document-numbering.service'
+import { ResourceAccessService } from '../security/resource-access.service'
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { randomUUID } from 'crypto'
@@ -8,7 +10,7 @@ type DocumentStatus = string
 
 @Injectable()
 export class DocumentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly access: ResourceAccessService, private readonly numbering: DocumentNumberingService) {}
 
   private toDto(item: any) {
     if (!item) return item
@@ -44,10 +46,13 @@ export class DocumentsService {
 
   async list(params: any, currentUser: any) {
     const where: any = {
-      account_id: params.accountId || currentUser.accountId,
+      account_id: currentUser.accountId,
     }
 
-    if (params.processId) where.process_id = params.processId
+    if (String(currentUser.role).toLowerCase() !== 'admin') {
+      const ids = await this.access.availableProcessIds(currentUser)
+      where.process_id = { in: params.processId ? ids.filter(id => id === params.processId) : ids }
+    } else if (params.processId) where.process_id = params.processId
     if (params.status) where.status = params.status
     if (params.createdById) where.created_by_id = params.createdById
     if (params.code) where.code = params.code
@@ -60,11 +65,12 @@ export class DocumentsService {
   }
 
   async my(params: any, currentUser: any) {
+    const permittedIds = String(currentUser.role).toLowerCase() === 'admin' ? null : await this.access.availableProcessIds(currentUser)
     const items = await this.prisma.document_instances.findMany({
       where: {
-        account_id: params.accountId || currentUser.accountId,
+        account_id: currentUser.accountId,
         created_by_id: currentUser.id,
-        ...(params.processId ? { process_id: params.processId } : {}),
+        ...(permittedIds ? { process_id: { in: params.processId ? permittedIds.filter(id => id === params.processId) : permittedIds } } : params.processId ? { process_id: params.processId } : {}),
         ...(params.status ? { status: params.status } : {}),
       },
       orderBy: { created_at: 'desc' },
@@ -104,14 +110,10 @@ export class DocumentsService {
   }
 
   async create(data: any, currentUser: any) {
-    const accountId = data.accountId || currentUser.accountId
+    const accountId = currentUser.accountId
     const processId = data.processId
     if (!processId) throw new NotFoundException('Processo não informado.')
-
-    const count = await this.prisma.documents.count({
-      where: { account_id: accountId },
-    })
-    const code = data.code || `DOC-${String(count + 1).padStart(6, '0')}`
+    // A emissão do código ocorre na mesma transação da criação do documento.
 
     const workflowId = String(data.workflowId || '')
     if (!workflowId) throw new NotFoundException('Workflow não informado.')
@@ -125,6 +127,11 @@ export class DocumentsService {
     })
 
     const result = await this.prisma.$transaction(async (tx) => {
+      const code = await this.numbering.issue(tx, {
+        accountId, processId, workflowId, requestedCode: data.code,
+        metadata: data.initialMetadataValues,
+        area: data.areaCode, unit: data.unitCode,
+      })
       const base = await tx.documents.create({
         data: {
           account_id: accountId,
@@ -134,8 +141,8 @@ export class DocumentsService {
           code,
           workflow_id: workflowId,
           workflow_name: data.workflowName,
-          created_by_id: data.createdById || currentUser.id,
-          created_by_name: data.createdByName || currentUser.name,
+          created_by_id: currentUser.id,
+          created_by_name: currentUser.name,
         },
       })
 
@@ -153,8 +160,8 @@ export class DocumentsService {
           current_step_name: firstElement?.name,
           current_step_order_index: firstElement?.order_index,
           current_element_id: firstElement?.element_id,
-          created_by_id: data.createdById || currentUser.id,
-          created_by_name: data.createdByName || currentUser.name,
+          created_by_id: currentUser.id,
+          created_by_name: currentUser.name,
           document_id: base.id,
         },
       })
@@ -287,6 +294,22 @@ export class DocumentsService {
   }
 
   async executeAction(id: string, body: any, currentUser: any) {
+    // Regras de GRD sao lidas do servidor, nunca dos parametros enviados pela interface.
+    const grdDocument = await this.prisma.document_instances.findFirst({ where: { id, account_id: currentUser.accountId } })
+    if (grdDocument) {
+      const links = await this.prisma.configuration_environment_processes.findMany({ where: { account_id: currentUser.accountId, process_id: grdDocument.process_id }, select: { environment_id: true } })
+      const resources = await this.prisma.configuration_resources.findMany({ where: { account_id: currentUser.accountId, kind: 'process-settings', is_active: true, code: 'PROC_' + grdDocument.process_id.replace(/-/g, '').toUpperCase(), environment_id: { in: links.map(l => l.environment_id) } }, select: { content: true } })
+      if (resources.length === 1) {
+        const behavior = (resources[0].content as any)?.documentBehavior
+        if (behavior?.type === 'grd' && behavior.grd?.requireDocuments !== false) {
+          const minimum = Number(behavior.grd?.minimumDocuments ?? 1)
+          if (!Number.isInteger(minimum) || minimum < 1 || minimum > 1000) throw new ConflictException('Quantidade minima invalida na configuracao GRD.')
+          const attached = await this.prisma.document_relations.count({ where: { account_id: currentUser.accountId, parent_document_instance_id: id, relation_type: 'grd' } })
+          if (attached < minimum) throw new ConflictException('A GRD exige pelo menos ' + minimum + ' documento(s) vinculado(s) antes de avancar.')
+        }
+      }
+    }
+
     const document = await this.prisma.document_instances.findUniqueOrThrow({
       where: { id },
     })

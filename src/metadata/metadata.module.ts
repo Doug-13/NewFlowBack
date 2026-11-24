@@ -1,3 +1,5 @@
+import { ResourceAccessService } from '../security/resource-access.service'
+import { ResourceAccessGuard } from '../security/resource-access.guard'
 import { MetadataSetsController } from './metadata-sets.controller'
 import { NotificationTemplatesController } from './notification-templates.controller'
 // src/metadata/metadata.module.ts
@@ -13,6 +15,6 @@ import { MetadataService } from './metadata.service'
     AuthModule,
   ],
   controllers: [MetadataController, MetadataSetsController, NotificationTemplatesController],
-  providers: [MetadataService],
+  providers: [ResourceAccessService, ResourceAccessGuard,MetadataService],
 })
 export class MetadataModule {}

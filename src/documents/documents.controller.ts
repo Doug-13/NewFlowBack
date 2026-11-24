@@ -1,3 +1,4 @@
+import { ResourceAccessGuard } from '../security/resource-access.guard'
 import {
   Body,
   Controller,
@@ -25,7 +26,7 @@ import { DocumentGovernanceService } from './document-governance.service'
 const uploadDir = join(process.cwd(), 'uploads')
 if (!existsSync(uploadDir)) mkdirSync(uploadDir, { recursive: true })
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ResourceAccessGuard)
 @Controller('document-instances')
 export class DocumentsController {
   constructor(private readonly service: DocumentsService, private readonly governance: DocumentGovernanceService) {}

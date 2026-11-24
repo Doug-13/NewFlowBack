@@ -1,3 +1,5 @@
+import { ResourceAccessService } from '../security/resource-access.service'
+import { ResourceAccessGuard } from '../security/resource-access.guard'
 // src/workflows/workflows.module.ts
 import { Module } from '@nestjs/common'
 import { AuthModule } from '../auth/auth.module'
@@ -11,6 +13,6 @@ import { WorkflowsService } from './workflows.service'
     AuthModule,
   ],
   controllers: [WorkflowsController],
-  providers: [WorkflowsService],
+  providers: [ResourceAccessService, ResourceAccessGuard,WorkflowsService],
 })
 export class WorkflowsModule {}
