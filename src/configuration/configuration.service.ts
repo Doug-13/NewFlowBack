@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 
-const KINDS = new Set(['scripts', 'visualization', 'document-policy'])
+const KINDS = new Set(['scripts', 'visualization', 'document-policy', 'process-settings'])
 const CODE = /^[A-Z][A-Z0-9_-]{1,59}$/
 
 @Injectable()
