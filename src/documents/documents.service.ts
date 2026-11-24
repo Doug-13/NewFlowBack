@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { randomUUID } from 'crypto'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
@@ -202,6 +202,9 @@ export class DocumentsService {
       where: { id },
     })
 
+    if (['published', 'archived', 'cancelled'].includes(current.status)) {
+      throw new ConflictException('Esta revisão está bloqueada para edição. Crie uma nova revisão.')
+    }
     const payload: any = {
       title: data.title,
       process_id: data.processId,
@@ -288,6 +291,9 @@ export class DocumentsService {
       where: { id },
     })
 
+    if (['published', 'archived', 'cancelled', 'completed'].includes(document.status)) {
+      throw new ConflictException('Uma revisão encerrada não pode executar novas ações.')
+    }
     const transition = await this.prisma.workflow_transitions.findFirst({
       where: {
         workflow_id: document.workflow_id,
@@ -412,7 +418,11 @@ export class DocumentsService {
   }
 
   async createFile(id: string, file: Express.Multer.File, body: any, currentUser: any) {
-    await this.prisma.document_instances.findUniqueOrThrow({ where: { id } })
+    const document = await this.prisma.document_instances.findFirst({ where: { id, account_id: currentUser.accountId } })
+    if (!document) throw new NotFoundException('Documento não encontrado.')
+    if (['published', 'archived', 'cancelled'].includes(document.status)) {
+      throw new ConflictException('Não é permitido alterar anexos de uma revisão encerrada.')
+    }
     const files = this.readFileManifest()
     const saved = {
       id: randomUUID(),

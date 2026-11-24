@@ -677,3 +677,48 @@ model workflows {
   @@index([account_id], map: "idx_workflows_account_id")
   @@index([account_id, updated_at(sort: Desc), created_at(sort: Desc)], map: "idx_workflows_account_updated_created")
 }
+
+// Gestão de múltiplos ambientes e catálogos de configuração (NewFlow V5).
+model configuration_environments {
+  id          String   @id @default(uuid()) @db.Uuid
+  account_id  String   @db.VarChar(100)
+  name        String   @db.VarChar(180)
+  code        String   @db.VarChar(60)
+  description String?  @db.VarChar(1000)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+  processes   configuration_environment_processes[]
+  resources   configuration_resources[]
+
+  @@unique([account_id, code])
+  @@index([account_id])
+}
+
+model configuration_environment_processes {
+  id             String @id @default(uuid()) @db.Uuid
+  account_id     String @db.VarChar(100)
+  environment_id String @db.Uuid
+  process_id     String @db.VarChar(100)
+  environment    configuration_environments @relation(fields: [environment_id], references: [id], onDelete: Cascade)
+
+  @@unique([account_id, process_id])
+  @@index([environment_id])
+}
+
+model configuration_resources {
+  id             String @id @default(uuid()) @db.Uuid
+  account_id     String @db.VarChar(100)
+  environment_id String @db.Uuid
+  kind           String @db.VarChar(40)
+  name           String @db.VarChar(180)
+  code           String @db.VarChar(60)
+  content        Json
+  is_active      Boolean @default(true)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+  environment    configuration_environments @relation(fields: [environment_id], references: [id], onDelete: Cascade)
+
+  @@unique([environment_id, kind, code])
+  @@index([account_id, environment_id, kind])
+}

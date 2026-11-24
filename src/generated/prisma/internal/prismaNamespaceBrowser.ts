@@ -84,7 +84,10 @@ export const ModelName = {
   workflow_element_configs: 'workflow_element_configs',
   workflow_elements: 'workflow_elements',
   workflow_transitions: 'workflow_transitions',
-  workflows: 'workflows'
+  workflows: 'workflows',
+  configuration_environments: 'configuration_environments',
+  configuration_environment_processes: 'configuration_environment_processes',
+  configuration_resources: 'configuration_resources'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -724,6 +727,46 @@ export const WorkflowsScalarFieldEnum = {
 } as const
 
 export type WorkflowsScalarFieldEnum = (typeof WorkflowsScalarFieldEnum)[keyof typeof WorkflowsScalarFieldEnum]
+
+
+export const Configuration_environmentsScalarFieldEnum = {
+  id: 'id',
+  account_id: 'account_id',
+  name: 'name',
+  code: 'code',
+  description: 'description',
+  is_active: 'is_active',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type Configuration_environmentsScalarFieldEnum = (typeof Configuration_environmentsScalarFieldEnum)[keyof typeof Configuration_environmentsScalarFieldEnum]
+
+
+export const Configuration_environment_processesScalarFieldEnum = {
+  id: 'id',
+  account_id: 'account_id',
+  environment_id: 'environment_id',
+  process_id: 'process_id'
+} as const
+
+export type Configuration_environment_processesScalarFieldEnum = (typeof Configuration_environment_processesScalarFieldEnum)[keyof typeof Configuration_environment_processesScalarFieldEnum]
+
+
+export const Configuration_resourcesScalarFieldEnum = {
+  id: 'id',
+  account_id: 'account_id',
+  environment_id: 'environment_id',
+  kind: 'kind',
+  name: 'name',
+  code: 'code',
+  content: 'content',
+  is_active: 'is_active',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type Configuration_resourcesScalarFieldEnum = (typeof Configuration_resourcesScalarFieldEnum)[keyof typeof Configuration_resourcesScalarFieldEnum]
 
 
 export const SortOrder = {

@@ -430,7 +430,10 @@ export const ModelName = {
   workflow_element_configs: 'workflow_element_configs',
   workflow_elements: 'workflow_elements',
   workflow_transitions: 'workflow_transitions',
-  workflows: 'workflows'
+  workflows: 'workflows',
+  configuration_environments: 'configuration_environments',
+  configuration_environment_processes: 'configuration_environment_processes',
+  configuration_resources: 'configuration_resources'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -446,7 +449,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "accounts" | "audit_logs" | "document_action_history" | "document_instances" | "document_relations" | "documents" | "environment_settings" | "metadata_definitions" | "metadata_sets" | "metadata_value_table_cells" | "metadata_value_table_rows" | "metadata_value_tables" | "metadata_values" | "notification_templates" | "organization_areas" | "organization_groups" | "organization_roles" | "processes" | "tasks" | "user_process_memberships" | "users" | "workflow_activity_actions" | "workflow_activity_config_areas" | "workflow_activity_config_disciplines" | "workflow_activity_config_groups" | "workflow_activity_config_positions" | "workflow_activity_config_roles" | "workflow_activity_config_users" | "workflow_activity_configs" | "workflow_activity_metadata" | "workflow_element_configs" | "workflow_elements" | "workflow_transitions" | "workflows"
+    modelProps: "accounts" | "audit_logs" | "document_action_history" | "document_instances" | "document_relations" | "documents" | "environment_settings" | "metadata_definitions" | "metadata_sets" | "metadata_value_table_cells" | "metadata_value_table_rows" | "metadata_value_tables" | "metadata_values" | "notification_templates" | "organization_areas" | "organization_groups" | "organization_roles" | "processes" | "tasks" | "user_process_memberships" | "users" | "workflow_activity_actions" | "workflow_activity_config_areas" | "workflow_activity_config_disciplines" | "workflow_activity_config_groups" | "workflow_activity_config_positions" | "workflow_activity_config_roles" | "workflow_activity_config_users" | "workflow_activity_configs" | "workflow_activity_metadata" | "workflow_element_configs" | "workflow_elements" | "workflow_transitions" | "workflows" | "configuration_environments" | "configuration_environment_processes" | "configuration_resources"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2966,6 +2969,228 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    configuration_environments: {
+      payload: Prisma.$configuration_environmentsPayload<ExtArgs>
+      fields: Prisma.configuration_environmentsFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.configuration_environmentsFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environmentsPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.configuration_environmentsFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environmentsPayload>
+        }
+        findFirst: {
+          args: Prisma.configuration_environmentsFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environmentsPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.configuration_environmentsFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environmentsPayload>
+        }
+        findMany: {
+          args: Prisma.configuration_environmentsFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environmentsPayload>[]
+        }
+        create: {
+          args: Prisma.configuration_environmentsCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environmentsPayload>
+        }
+        createMany: {
+          args: Prisma.configuration_environmentsCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.configuration_environmentsCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environmentsPayload>[]
+        }
+        delete: {
+          args: Prisma.configuration_environmentsDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environmentsPayload>
+        }
+        update: {
+          args: Prisma.configuration_environmentsUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environmentsPayload>
+        }
+        deleteMany: {
+          args: Prisma.configuration_environmentsDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.configuration_environmentsUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.configuration_environmentsUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environmentsPayload>[]
+        }
+        upsert: {
+          args: Prisma.configuration_environmentsUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environmentsPayload>
+        }
+        aggregate: {
+          args: Prisma.Configuration_environmentsAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateConfiguration_environments>
+        }
+        groupBy: {
+          args: Prisma.configuration_environmentsGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Configuration_environmentsGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.configuration_environmentsCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Configuration_environmentsCountAggregateOutputType> | number
+        }
+      }
+    }
+    configuration_environment_processes: {
+      payload: Prisma.$configuration_environment_processesPayload<ExtArgs>
+      fields: Prisma.configuration_environment_processesFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.configuration_environment_processesFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environment_processesPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.configuration_environment_processesFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environment_processesPayload>
+        }
+        findFirst: {
+          args: Prisma.configuration_environment_processesFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environment_processesPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.configuration_environment_processesFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environment_processesPayload>
+        }
+        findMany: {
+          args: Prisma.configuration_environment_processesFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environment_processesPayload>[]
+        }
+        create: {
+          args: Prisma.configuration_environment_processesCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environment_processesPayload>
+        }
+        createMany: {
+          args: Prisma.configuration_environment_processesCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.configuration_environment_processesCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environment_processesPayload>[]
+        }
+        delete: {
+          args: Prisma.configuration_environment_processesDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environment_processesPayload>
+        }
+        update: {
+          args: Prisma.configuration_environment_processesUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environment_processesPayload>
+        }
+        deleteMany: {
+          args: Prisma.configuration_environment_processesDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.configuration_environment_processesUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.configuration_environment_processesUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environment_processesPayload>[]
+        }
+        upsert: {
+          args: Prisma.configuration_environment_processesUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_environment_processesPayload>
+        }
+        aggregate: {
+          args: Prisma.Configuration_environment_processesAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateConfiguration_environment_processes>
+        }
+        groupBy: {
+          args: Prisma.configuration_environment_processesGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Configuration_environment_processesGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.configuration_environment_processesCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Configuration_environment_processesCountAggregateOutputType> | number
+        }
+      }
+    }
+    configuration_resources: {
+      payload: Prisma.$configuration_resourcesPayload<ExtArgs>
+      fields: Prisma.configuration_resourcesFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.configuration_resourcesFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_resourcesPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.configuration_resourcesFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_resourcesPayload>
+        }
+        findFirst: {
+          args: Prisma.configuration_resourcesFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_resourcesPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.configuration_resourcesFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_resourcesPayload>
+        }
+        findMany: {
+          args: Prisma.configuration_resourcesFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_resourcesPayload>[]
+        }
+        create: {
+          args: Prisma.configuration_resourcesCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_resourcesPayload>
+        }
+        createMany: {
+          args: Prisma.configuration_resourcesCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.configuration_resourcesCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_resourcesPayload>[]
+        }
+        delete: {
+          args: Prisma.configuration_resourcesDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_resourcesPayload>
+        }
+        update: {
+          args: Prisma.configuration_resourcesUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_resourcesPayload>
+        }
+        deleteMany: {
+          args: Prisma.configuration_resourcesDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.configuration_resourcesUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.configuration_resourcesUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_resourcesPayload>[]
+        }
+        upsert: {
+          args: Prisma.configuration_resourcesUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$configuration_resourcesPayload>
+        }
+        aggregate: {
+          args: Prisma.Configuration_resourcesAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateConfiguration_resources>
+        }
+        groupBy: {
+          args: Prisma.configuration_resourcesGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Configuration_resourcesGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.configuration_resourcesCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Configuration_resourcesCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -3628,6 +3853,46 @@ export const WorkflowsScalarFieldEnum = {
 export type WorkflowsScalarFieldEnum = (typeof WorkflowsScalarFieldEnum)[keyof typeof WorkflowsScalarFieldEnum]
 
 
+export const Configuration_environmentsScalarFieldEnum = {
+  id: 'id',
+  account_id: 'account_id',
+  name: 'name',
+  code: 'code',
+  description: 'description',
+  is_active: 'is_active',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type Configuration_environmentsScalarFieldEnum = (typeof Configuration_environmentsScalarFieldEnum)[keyof typeof Configuration_environmentsScalarFieldEnum]
+
+
+export const Configuration_environment_processesScalarFieldEnum = {
+  id: 'id',
+  account_id: 'account_id',
+  environment_id: 'environment_id',
+  process_id: 'process_id'
+} as const
+
+export type Configuration_environment_processesScalarFieldEnum = (typeof Configuration_environment_processesScalarFieldEnum)[keyof typeof Configuration_environment_processesScalarFieldEnum]
+
+
+export const Configuration_resourcesScalarFieldEnum = {
+  id: 'id',
+  account_id: 'account_id',
+  environment_id: 'environment_id',
+  kind: 'kind',
+  name: 'name',
+  code: 'code',
+  content: 'content',
+  is_active: 'is_active',
+  created_at: 'created_at',
+  updated_at: 'updated_at'
+} as const
+
+export type Configuration_resourcesScalarFieldEnum = (typeof Configuration_resourcesScalarFieldEnum)[keyof typeof Configuration_resourcesScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -3943,6 +4208,9 @@ export type GlobalOmitConfig = {
   workflow_elements?: Prisma.workflow_elementsOmit
   workflow_transitions?: Prisma.workflow_transitionsOmit
   workflows?: Prisma.workflowsOmit
+  configuration_environments?: Prisma.configuration_environmentsOmit
+  configuration_environment_processes?: Prisma.configuration_environment_processesOmit
+  configuration_resources?: Prisma.configuration_resourcesOmit
 }
 
 /* Types for Logging */

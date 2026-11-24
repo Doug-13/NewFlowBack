@@ -209,3 +209,18 @@ export type workflow_transitions = Prisma.workflow_transitionsModel
  * This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
  */
 export type workflows = Prisma.workflowsModel
+/**
+ * Model configuration_environments
+ * 
+ */
+export type configuration_environments = Prisma.configuration_environmentsModel
+/**
+ * Model configuration_environment_processes
+ * 
+ */
+export type configuration_environment_processes = Prisma.configuration_environment_processesModel
+/**
+ * Model configuration_resources
+ * 
+ */
+export type configuration_resources = Prisma.configuration_resourcesModel

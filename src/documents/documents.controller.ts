@@ -20,6 +20,7 @@ import type { Response } from 'express'
 import { CurrentUser } from '../auth/current-user.decorator'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { DocumentsService } from './documents.service'
+import { DocumentGovernanceService } from './document-governance.service'
 
 const uploadDir = join(process.cwd(), 'uploads')
 if (!existsSync(uploadDir)) mkdirSync(uploadDir, { recursive: true })
@@ -27,7 +28,7 @@ if (!existsSync(uploadDir)) mkdirSync(uploadDir, { recursive: true })
 @UseGuards(JwtAuthGuard)
 @Controller('document-instances')
 export class DocumentsController {
-  constructor(private readonly service: DocumentsService) {}
+  constructor(private readonly service: DocumentsService, private readonly governance: DocumentGovernanceService) {}
 
   @Get('my')
   my(@Query() query: any, @CurrentUser() user: any) {
@@ -134,7 +135,7 @@ export class DocumentsController {
 
   @Patch(':id/publish')
   publish(@Param('id') id: string, @Body() body: any, @CurrentUser() user: any) {
-    return this.service.changeStatus(id, 'published', user, body)
+    return this.governance.publish(id, body, user)
   }
 
   @Get(':id')

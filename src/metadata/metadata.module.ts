@@ -1,3 +1,5 @@
+import { MetadataSetsController } from './metadata-sets.controller'
+import { NotificationTemplatesController } from './notification-templates.controller'
 // src/metadata/metadata.module.ts
 import { Module } from '@nestjs/common'
 import { AuthModule } from '../auth/auth.module'
@@ -10,7 +12,7 @@ import { MetadataService } from './metadata.service'
     PrismaModule,
     AuthModule,
   ],
-  controllers: [MetadataController],
+  controllers: [MetadataController, MetadataSetsController, NotificationTemplatesController],
   providers: [MetadataService],
 })
 export class MetadataModule {}

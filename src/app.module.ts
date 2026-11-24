@@ -10,6 +10,7 @@ import { DashboardModule } from './dashboard/dashboard.module'
 import { MetadataModule } from './metadata/metadata.module'
 import { EnvironmentSettingsModule } from './environment-settings/environment-settings.module'
 import { WorkflowsModule } from './workflows/workflows.module'
+import { ConfigurationModule } from './configuration/configuration.module'
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { WorkflowsModule } from './workflows/workflows.module'
     MetadataModule,
     EnvironmentSettingsModule,
     WorkflowsModule,
+    ConfigurationModule,
   ],
 })
 export class AppModule {}
