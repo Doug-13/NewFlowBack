@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
+import { resolveCorsOrigins } from './auth/auth-security'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
@@ -10,7 +11,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api')
 
   app.enableCors({
-    origin: config.get<string>('CORS_ORIGIN')?.split(',').map((item) => item.trim()) ?? true,
+    origin: resolveCorsOrigins(config.get<string>('CORS_ORIGIN'), process.env.NODE_ENV === 'production'),
     credentials: true,
   })
 

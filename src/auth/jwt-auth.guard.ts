@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { PrismaService } from '../prisma/prisma.service'
+import { readBearerJwt } from './auth-security'
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -16,16 +17,14 @@ export class JwtAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest()
-    const authorization = String(request.headers.authorization || '')
-
-    if (!authorization.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Token não informado.')
-    }
-
-    const token = authorization.slice(7)
+    const token = readBearerJwt(request.headers.authorization)
+    if (!token) throw new UnauthorizedException('Token nao informado ou malformado.')
 
     try {
       const payload = await this.jwtService.verifyAsync(token)
+      if (!payload || typeof payload.sub !== 'string' || !payload.sub.trim()) {
+        throw new UnauthorizedException('Token sem identidade valida.')
+      }
 
       const user = await this.prisma.users.findUnique({
         where: { id: payload.sub },
