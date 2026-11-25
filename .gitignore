@@ -3,3 +3,12 @@ dist
 .env
 uploads
 .prisma
+# NewFlow Fase 0 - arquivos locais e gerados
+.env.*
+!.env.example
+.backup-*/
+*.bak
+*.bak-*
+*.v5-backup
+*.dgt-backup
+src/generated/prisma/
