@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "API NestJS do NewFlowDev usando PostgreSQL/Neon + Prisma",
-  "scripts": {
+  "scripts": {"prebuild": "npm run prisma:generate",
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
