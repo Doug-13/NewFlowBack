@@ -34,18 +34,19 @@ export class UsersService {
     return users.map((user) => this.toDto(user))
   }
 
-  async create(data: any, fallbackAccountId: string) {
+  async create(data: any, accountId: string) {
     const email = String(data.email || '').trim().toLowerCase()
-
+    if (!email) throw new BadRequestException('E-mail obrigatorio.')
     if (await this.prisma.users.findUnique({ where: { email } })) {
-      throw new BadRequestException('Já existe um usuário com este e-mail.')
+      throw new BadRequestException('Ja existe um usuario com este e-mail.')
     }
-
-    const passwordHash = await bcrypt.hash(data.password || 'Mudar@123', 12)
-
+    // Nunca confiar em accountId fornecido pelo cliente.
+    const password = String(data.password ?? '')
+    if (password.length < 12) throw new BadRequestException('Senha inicial deve ter ao menos 12 caracteres.')
+    const passwordHash = await bcrypt.hash(password, 12)
     const user = await this.prisma.users.create({
       data: {
-        account_id: data.accountId || fallbackAccountId,
+        account_id: accountId,
         name: data.name,
         email,
         password_hash: passwordHash,
@@ -60,14 +61,12 @@ export class UsersService {
         notes: data.notes,
       },
     })
-
     return this.toDto(user)
   }
 
-  async update(id: string, data: any) {
-    const exists = await this.prisma.users.findUnique({ where: { id } })
-    if (!exists) throw new NotFoundException('Usuário não encontrado.')
-
+  async update(id: string, data: any, accountId: string) {
+    const exists = await this.prisma.users.findFirst({ where: { id, account_id: accountId } })
+    if (!exists) throw new NotFoundException('Usuario nao encontrado.')
     const payload: any = {
       name: data.name,
       email: data.email ? String(data.email).trim().toLowerCase() : undefined,
@@ -82,25 +81,23 @@ export class UsersService {
       notes: data.notes,
       updated_at: new Date(),
     }
-
-    if (data.password) {
+    if (data.password !== undefined && data.password !== null && data.password !== '') {
+      if (typeof data.password !== 'string' || data.password.length < 12) {
+        throw new BadRequestException('Senha deve ter ao menos 12 caracteres.')
+      }
       payload.password_hash = await bcrypt.hash(data.password, 12)
     }
-
     Object.keys(payload).forEach((key) => payload[key] === undefined && delete payload[key])
-
     const user = await this.prisma.users.update({
-      where: { id },
+      where: { id, account_id: accountId },
       data: payload,
     })
-
     return this.toDto(user)
   }
 
-  async remove(id: string) {
-    await this.prisma.users.delete({ where: { id } }).catch(() => {
-      throw new NotFoundException('Usuário não encontrado.')
-    })
+  async remove(id: string, accountId: string) {
+    const removed = await this.prisma.users.deleteMany({ where: { id, account_id: accountId } })
+    if (removed.count !== 1) throw new NotFoundException('Usuario nao encontrado.')
     return { success: true }
   }
 }
