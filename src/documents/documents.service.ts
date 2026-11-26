@@ -1,4 +1,5 @@
 import { DocumentNumberingService } from '../document-numbering/document-numbering.service'
+import { authorizeWorkflowAction, chooseWorkflowTransition } from '../workflow-runtime/transition-policy'
 import { ResourceAccessService } from '../security/resource-access.service'
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
@@ -317,17 +318,17 @@ export class DocumentsService {
     if (['published', 'archived', 'cancelled', 'completed'].includes(document.status)) {
       throw new ConflictException('Uma revisão encerrada não pode executar novas ações.')
     }
-    const transition = await this.prisma.workflow_transitions.findFirst({
-      where: {
-        workflow_id: document.workflow_id,
-        source_element_id: document.current_element_id || '',
-        OR: [
-          ...(body.outcome ? [{ outcome: body.outcome }] : []),
-          { is_default: true },
-        ],
-      },
-      orderBy: [{ is_default: 'asc' }, { order_index: 'asc' }],
-    })
+    // A configuracao do workflow no servidor e a fonte de verdade da acao.
+    const [configuredActions, availableTransitions] = await Promise.all([
+      this.prisma.workflow_activity_actions.findMany({
+        where: { workflow_id: document.workflow_id, element_id: document.current_element_id || '' },
+      }),
+      this.prisma.workflow_transitions.findMany({
+        where: { workflow_id: document.workflow_id, source_element_id: document.current_element_id || '' },
+      }),
+    ])
+    const actionPolicy = authorizeWorkflowAction(configuredActions, body)
+    const transition = chooseWorkflowTransition(availableTransitions, actionPolicy.outcome, actionPolicy.targetId)
 
     const target = transition
       ? await this.prisma.workflow_elements.findFirst({
@@ -347,8 +348,8 @@ export class DocumentsService {
           step_name: document.current_step_name,
           step_order_index: document.current_step_order_index,
           element_id: document.current_element_id,
-          action_id: String(body.actionId || body.action || 'action'),
-          outcome: body.outcome,
+          action_id: actionPolicy.actionKey,
+          outcome: actionPolicy.outcome,
           comment: body.comment,
           executed_by_user_id: currentUser.id,
           executed_by_user_name: currentUser.name,
