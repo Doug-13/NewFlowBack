@@ -1,4 +1,5 @@
 import { DocumentNumberingService } from '../document-numbering/document-numbering.service'
+import { planGateway, requireSingleTokenGateway } from '../workflow-runtime/gateway-policy'
 import { authorizeWorkflowAction, chooseWorkflowTransition } from '../workflow-runtime/transition-policy'
 import { ResourceAccessService } from '../security/resource-access.service'
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
@@ -330,7 +331,7 @@ export class DocumentsService {
     const actionPolicy = authorizeWorkflowAction(configuredActions, body)
     const transition = chooseWorkflowTransition(availableTransitions, actionPolicy.outcome, actionPolicy.targetId)
 
-    const target = transition
+    let target = transition
       ? await this.prisma.workflow_elements.findFirst({
           where: {
             workflow_id: document.workflow_id,
@@ -338,6 +339,25 @@ export class DocumentsService {
           },
         })
       : null
+
+    if (!target) throw new ConflictException('A transição não possui destino válido no workflow.')
+    // Gateways são resolvidos pelo grafo no servidor; AND/OR exigem tokens independentes.
+    // Até existir persistência de tokens, recusamos avançar só por um dos ramos.
+    const gatewayFlows = await this.prisma.workflow_transitions.findMany({
+      where: { workflow_id: document.workflow_id, source_element_id: target.element_id },
+    })
+    const gateway = planGateway(target, gatewayFlows, actionPolicy.outcome)
+    if (gateway) {
+      const nextId = requireSingleTokenGateway(gateway)
+      target = await this.prisma.workflow_elements.findFirst({
+        where: { workflow_id: document.workflow_id, element_id: nextId },
+      })
+      if (!target) throw new ConflictException('Gateway aponta para um elemento inexistente.')
+      // Não avançar implicitamente por um segundo gateway sem resolver a semântica do grafo.
+      if (planGateway(target, [], actionPolicy.outcome) !== null) {
+        throw new ConflictException('Gateways encadeados exigem execução explícita do motor BPMN.')
+      }
+    }
 
     const isEnd = Boolean(target?.is_end || target?.element_kind === 'endEvent')
 
