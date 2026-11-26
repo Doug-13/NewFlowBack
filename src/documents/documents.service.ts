@@ -316,6 +316,24 @@ export class DocumentsService {
       where: { id },
     })
 
+    // Fase 2G: nunca avancar o pai enquanto um subprocesso obrigatorio estiver aberto.
+    // Ler o status do documento filho diretamente evita confiar em relacoes desatualizadas.
+    const waitingChildren = await this.prisma.document_relations.findMany({
+      where: { account_id: currentUser.accountId, parent_document_instance_id: id,
+        relation_type: 'subprocess', wait_for_completion: true },
+      select: { child_document_instance_id: true },
+    })
+    if (waitingChildren.length) {
+      const children = await this.prisma.document_instances.findMany({
+        where: { account_id: currentUser.accountId,
+          id: { in: waitingChildren.map(link => link.child_document_instance_id) } },
+        select: { id: true, status: true },
+      })
+      const states = new Map(children.map(child => [child.id, child.status]))
+      if (waitingChildren.some(link => !['completed', 'published', 'archived'].includes(states.get(link.child_document_instance_id) ?? 'missing'))) {
+        throw new ConflictException('Subprocessos obrigatorios ainda pendentes.')
+      }
+    }
     if (['published', 'archived', 'cancelled', 'completed'].includes(document.status)) {
       throw new ConflictException('Uma revisão encerrada não pode executar novas ações.')
     }
