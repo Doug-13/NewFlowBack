@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import { enforceWorkflowAssignee } from '../workflow-runtime/assignment-access'
 
 type Action = 'read' | 'write' | 'execute' | 'admin'
 
@@ -64,7 +65,7 @@ export class ResourceAccessService {
     await this.process(user, document.process_id, 'read')
     if (action === 'admin') throw new ForbiddenException('Ação reservada ao administrador.')
     if (action === 'execute') {
-      if (document.current_assigned_user_id !== user.id) throw new ForbiddenException('Atividade não atribuída ao usuário.')
+      await enforceWorkflowAssignee(this.prisma, user, document)
     } else if (action === 'write') {
       if (document.created_by_id !== user.id && document.current_assigned_user_id !== user.id) throw new ForbiddenException('Usuário não autorizado a alterar este documento.')
     }
