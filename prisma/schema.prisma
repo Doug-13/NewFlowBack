@@ -722,3 +722,16 @@ model configuration_resources {
   @@unique([environment_id, kind, code])
   @@index([account_id, environment_id, kind])
 }
+
+model auth_sessions {
+  id          String    @id @db.Uuid
+  user_id     String    @db.Uuid
+  account_id  String    @db.VarChar(100)
+  token_hash  String    @unique @db.VarChar(64)
+  expires_at  DateTime  @db.Timestamptz(6)
+  revoked_at  DateTime? @db.Timestamptz(6)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([user_id, account_id], map: "idx_auth_sessions_user_account")
+  @@index([expires_at], map: "idx_auth_sessions_expiration")
+}

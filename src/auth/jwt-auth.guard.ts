@@ -7,12 +7,14 @@ import {
 import { JwtService } from '@nestjs/jwt'
 import { PrismaService } from '../prisma/prisma.service'
 import { readBearerJwt } from './auth-security'
+import { AuthSessionsService } from './auth-sessions.service'
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
+    private readonly sessions: AuthSessionsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -41,6 +43,7 @@ export class JwtAuthGuard implements CanActivate {
       if (!user?.is_active) {
         throw new UnauthorizedException('Usuário inválido ou inativo.')
       }
+      await this.sessions.assertActive(user.id, user.account_id, payload.jti, token)
 
       request.user = {
         id: user.id,
@@ -49,6 +52,7 @@ export class JwtAuthGuard implements CanActivate {
         email: user.email,
         role: user.role,
         isActive: user.is_active,
+        sessionId: payload.jti,
       }
 
       return true
