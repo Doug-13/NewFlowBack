@@ -316,6 +316,8 @@ export class DocumentsService {
       where: { id },
     })
 
+    const activeTokens = await this.prisma.workflow_execution_tokens.count({ where: { account_id: currentUser.accountId, document_instance_id: id, status: { in: ['active', 'arrived'] } } })
+    if (activeTokens) throw new ConflictException('Documento em execucao paralela. Use endpoint de tokens.')
     // Fase 2G: nunca avancar o pai enquanto um subprocesso obrigatorio estiver aberto.
     // Ler o status do documento filho diretamente evita confiar em relacoes desatualizadas.
     const waitingChildren = await this.prisma.document_relations.findMany({
@@ -337,6 +339,8 @@ export class DocumentsService {
     if (['published', 'archived', 'cancelled', 'completed'].includes(document.status)) {
       throw new ConflictException('Uma revisão encerrada não pode executar novas ações.')
     }
+    const currentGateway = await this.prisma.workflow_elements.findFirst({ where: { workflow_id: document.workflow_id, element_id: document.current_element_id ?? '' } })
+    if (currentGateway && /(?:parallel|inclusive)Gateway/i.test(currentGateway.element_kind)) throw new ConflictException('Ative o gateway pelo endpoint de tokens.')
     // A configuracao do workflow no servidor e a fonte de verdade da acao.
     const [configuredActions, availableTransitions] = await Promise.all([
       this.prisma.workflow_activity_actions.findMany({
@@ -366,6 +370,9 @@ export class DocumentsService {
     })
     const gateway = planGateway(target, gatewayFlows, actionPolicy.outcome)
     if (gateway) {
+      if (gateway.kind !== 'exclusive') {
+        // Fork via endpoint de tokens, sem escolher arbitrariamente um ramo.
+      } else {
       const nextId = requireSingleTokenGateway(gateway)
       target = await this.prisma.workflow_elements.findFirst({
         where: { workflow_id: document.workflow_id, element_id: nextId },
@@ -374,6 +381,7 @@ export class DocumentsService {
       // Não avançar implicitamente por um segundo gateway sem resolver a semântica do grafo.
       if (planGateway(target, [], actionPolicy.outcome) !== null) {
         throw new ConflictException('Gateways encadeados exigem execução explícita do motor BPMN.')
+      }
       }
     }
 
