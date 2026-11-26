@@ -735,3 +735,21 @@ model auth_sessions {
   @@index([user_id, account_id], map: "idx_auth_sessions_user_account")
   @@index([expires_at], map: "idx_auth_sessions_expiration")
 }
+
+model workflow_execution_tokens {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  account_id           String    @db.VarChar(100)
+  document_instance_id String    @db.Uuid
+  fork_key             String    @db.VarChar(255)
+  branch_key           String    @db.VarChar(255)
+  element_id           String    @db.VarChar(255)
+  join_element_id      String    @db.VarChar(255)
+  status               String    @default("active") @db.VarChar(30)
+  created_at           DateTime  @default(now()) @db.Timestamp(6)
+  updated_at           DateTime  @default(now()) @db.Timestamp(6)
+  arrived_at           DateTime? @db.Timestamp(6)
+
+  @@unique([document_instance_id, fork_key, branch_key], map: "uq_execution_token_branch")
+  @@index([account_id, document_instance_id], map: "idx_execution_token_account_document")
+  @@index([document_instance_id, fork_key, status], map: "idx_execution_token_fork_status")
+}
