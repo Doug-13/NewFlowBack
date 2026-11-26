@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common'
 import type { Request } from 'express'
 import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator'
 import { LoginThrottleService } from './login-throttle.service'
@@ -44,7 +44,26 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  logout() {
+  async logout(@CurrentUser() user: any) {
+    await this.service.logout(user.id, user.accountId, user.sessionId)
     return { success: true }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout-all')
+  logoutAll(@CurrentUser() user: any) {
+    return this.service.logoutAll(user.id, user.accountId)
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('sessions')
+  sessions(@CurrentUser() user: any) {
+    return this.service.listSessions(user.id, user.accountId, user.sessionId)
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('sessions/:sessionId')
+  revokeSession(@CurrentUser() user: any, @Param('sessionId') sessionId: string) {
+    return this.service.revokeSession(user.id, user.accountId, sessionId)
   }
 }
