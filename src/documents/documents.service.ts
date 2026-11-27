@@ -1,5 +1,6 @@
-﻿import { DocumentNumberingService } from '../document-numbering/document-numbering.service'
+import { DocumentNumberingService } from '../document-numbering/document-numbering.service'
 import { planGateway, requireSingleTokenGateway } from '../workflow-runtime/gateway-policy'
+import { timerSeconds } from '../workflow-automation/workflow-schedule-policy'
 import { authorizeWorkflowAction, chooseWorkflowTransition } from '../workflow-runtime/transition-policy'
 import { ResourceAccessService } from '../security/resource-access.service'
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
@@ -344,6 +345,7 @@ export class DocumentsService {
       throw new ConflictException('Uma revisão encerrada não pode executar novas ações.')
     }
     const currentGateway = await this.prisma.workflow_elements.findFirst({ where: { workflow_id: document.workflow_id, element_id: document.current_element_id ?? '' } })
+    if (currentGateway && timerSeconds(currentGateway) !== null) throw new ConflictException('Temporizador BPMN deve avancar somente pelo scheduler.')
     if (currentGateway && /(?:parallel|inclusive)Gateway/i.test(currentGateway.element_kind)) throw new ConflictException('Ative o gateway pelo endpoint de tokens.')
     // A configuracao do workflow no servidor e a fonte de verdade da acao.
     const [configuredActions, availableTransitions] = await Promise.all([
