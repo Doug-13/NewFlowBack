@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict'
+﻿import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { WorkflowTokenRuntimeService } from '../src/workflow-runtime/workflow-token-runtime.service'
 
@@ -54,7 +54,7 @@ test('2H: token avanca em ramo multipasso e AND une somente depois de ambos os r
     $queryRaw: async () => [{ id: 'doc' }],
     $transaction: async (fn: any) => fn(prisma),
   }
-  const runtime = new WorkflowTokenRuntimeService(prisma, { document: async () => document } as any)
+  const runtime = new WorkflowTokenRuntimeService(prisma, { document: async () => document } as any, { resumeAfterChildFinished: async () => ({ resumed: 0 }) } as any)
   const first = await runtime.action(user, 'doc', 'token-a', { actionId: 'complete' })
   assert.deepEqual(first, { advanced: true, nextElementId: 'a2', joined: false })
   assert.equal(tokens[0].element_id, 'a2')

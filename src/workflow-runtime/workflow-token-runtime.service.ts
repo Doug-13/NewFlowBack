@@ -1,6 +1,7 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+﻿import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { Prisma } from '../generated/prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
+import { ParentResumeService } from '../workflow-coordination/parent-resume.service'
 import { ResourceAccessService } from '../security/resource-access.service'
 import { enforceWorkflowAssignee } from './assignment-access'
 import { authorizeWorkflowAction, chooseWorkflowTransition } from './transition-policy'
@@ -14,7 +15,7 @@ import { validateLinearTokenBranches } from './branch-path-policy'
  */
 @Injectable()
 export class WorkflowTokenRuntimeService {
-  constructor(private readonly prisma: PrismaService, private readonly access: ResourceAccessService) {}
+  constructor(private readonly prisma: PrismaService, private readonly access: ResourceAccessService, private readonly parentResume: ParentResumeService) {}
 
   private async owned(user: any, documentId: string) {
     return this.access.document(user, documentId, 'read')
@@ -147,7 +148,7 @@ export class WorkflowTokenRuntimeService {
       throw new ConflictException('Transicao nao pertence a sequencia validada deste ramo.')
     }
     const reachesJoin = selected.target_element_id === token.join_element_id
-    return this.prisma.$transaction(async tx => {
+    const result = await this.prisma.$transaction(async tx => {
       // Serialize all token updates for this document, including concurrent branch completions.
       await tx.$queryRaw`SELECT id FROM document_instances WHERE id = ${documentId}::uuid FOR UPDATE`
       const latest = await tx.document_instances.findFirst({where: {id: documentId, account_id: user.accountId}})
@@ -200,5 +201,14 @@ export class WorkflowTokenRuntimeService {
       }})
       return {arrived: decision.arrived, expected: decision.expected, joined: true, nextElementId: target.element_id}
     }, {isolationLevel: Prisma.TransactionIsolationLevel.Serializable})
+    if (result.joined) {
+      const finalState = await this.prisma.document_instances.findFirst({
+        where: { id: documentId, account_id: user.accountId }, select: { status: true },
+      })
+      if (finalState && ['completed', 'published', 'archived'].includes(finalState.status)) {
+        await this.parentResume.resumeAfterChildFinished(user.accountId, documentId)
+      }
+    }
+    return result
   }
 }

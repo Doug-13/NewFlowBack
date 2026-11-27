@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict'
+﻿import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { ConflictException } from '@nestjs/common'
 import { validateLinearTokenBranches } from '../src/workflow-runtime/branch-path-policy'
@@ -62,7 +62,7 @@ test('2I: OR inicia tokens apenas para condicoes persistidas no servidor', async
     $queryRaw: async () => [{ id: 'd' }],
     $transaction: async (fn: any) => fn(prisma),
   }
-  const runtime = new WorkflowTokenRuntimeService(prisma, { document: async () => document } as any)
+  const runtime = new WorkflowTokenRuntimeService(prisma, { document: async () => document } as any, { resumeAfterChildFinished: async () => ({ resumed: 0 }) } as any)
   const result = await runtime.start({ id: 'admin', accountId: 'acc', role: 'admin' }, 'd')
   assert.equal(result.active, 1)
   assert.deepEqual(tokens.map(t => t.branch_key), ['a1'])
