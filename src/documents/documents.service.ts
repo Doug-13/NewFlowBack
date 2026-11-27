@@ -1,8 +1,9 @@
-import { DocumentNumberingService } from '../document-numbering/document-numbering.service'
+﻿import { DocumentNumberingService } from '../document-numbering/document-numbering.service'
 import { planGateway, requireSingleTokenGateway } from '../workflow-runtime/gateway-policy'
 import { authorizeWorkflowAction, chooseWorkflowTransition } from '../workflow-runtime/transition-policy'
 import { ResourceAccessService } from '../security/resource-access.service'
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import { ParentResumeService } from '../workflow-coordination/parent-resume.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { randomUUID } from 'crypto'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
@@ -12,7 +13,7 @@ type DocumentStatus = string
 
 @Injectable()
 export class DocumentsService {
-  constructor(private readonly prisma: PrismaService, private readonly access: ResourceAccessService, private readonly numbering: DocumentNumberingService) {}
+  constructor(private readonly prisma: PrismaService, private readonly access: ResourceAccessService, private readonly numbering: DocumentNumberingService, private readonly parentResume: ParentResumeService) {}
 
   private toDto(item: any) {
     if (!item) return item
@@ -292,6 +293,9 @@ export class DocumentsService {
       executorName: body.executorName || body.userName || currentUser.name,
     })
 
+    if (['completed', 'published', 'archived'].includes(status)) {
+      await this.parentResume.resumeAfterChildFinished(currentUser.accountId, id)
+    }
     return this.toDto(item)
   }
 
@@ -414,6 +418,7 @@ export class DocumentsService {
     ])
 
     await this.audit(id, currentUser, 'document.action', body)
+    if (isEnd) await this.parentResume.resumeAfterChildFinished(currentUser.accountId, id)
     return this.get(id)
   }
 

@@ -1,4 +1,4 @@
-import { GrdController } from '../grd/grd.controller'
+﻿import { GrdController } from '../grd/grd.controller'
 import { GrdService } from '../grd/grd.service'
 import { LdImportController } from '../ld-import/ld-import.controller'
 import { LdImportService } from '../ld-import/ld-import.service'
@@ -9,6 +9,7 @@ import { WorkflowCoordinationController } from '../workflow-coordination/workflo
 import { WorkflowCoordinationService } from '../workflow-coordination/workflow-coordination.service'
 import { WorkflowTokenRuntimeService } from '../workflow-runtime/workflow-token-runtime.service'
 import { WorkflowTokenRuntimeController } from '../workflow-runtime/workflow-token-runtime.controller'
+import { ParentResumeService } from '../workflow-coordination/parent-resume.service'
 import { Module } from '@nestjs/common'
 import { AuthModule } from '../auth/auth.module'
 import { DocumentsController } from './documents.controller'
@@ -19,6 +20,6 @@ import { DocumentGovernanceController } from './document-governance.controller'
 @Module({
   imports: [AuthModule],
   controllers: [GrdController,LdImportController,DocumentsController, DocumentGovernanceController, WorkflowCoordinationController, WorkflowTokenRuntimeController],
-  providers: [GrdService,LdImportService,DocumentNumberingService,ResourceAccessService, ResourceAccessGuard,DocumentsService, DocumentGovernanceService, WorkflowCoordinationService, WorkflowTokenRuntimeService],
+  providers: [GrdService,LdImportService,DocumentNumberingService,ResourceAccessService, ResourceAccessGuard,DocumentsService, DocumentGovernanceService, WorkflowCoordinationService, WorkflowTokenRuntimeService, ParentResumeService],
 })
 export class DocumentsModule {}

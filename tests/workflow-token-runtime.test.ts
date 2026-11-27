@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict'
+﻿import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { ConflictException, ForbiddenException } from '@nestjs/common'
 import { WorkflowTokenRuntimeService } from '../src/workflow-runtime/workflow-token-runtime.service'
@@ -16,7 +16,7 @@ function runtime(prisma: any = {}, access: any = { document: async () => doc }) 
     document_relations: { findMany: async () => [] },
     ...prisma,
   }
-  return new WorkflowTokenRuntimeService(mockPrisma as any, access)
+  return new WorkflowTokenRuntimeService(mockPrisma as any, access, { resumeAfterChildFinished: async () => ({ resumed: 0 }) } as any)
 }
 
 test('fork exige admin mesmo que usuario possa ler documento', async () => {

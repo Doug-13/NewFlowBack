@@ -1,7 +1,8 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+﻿import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { ResourceAccessService } from '../security/resource-access.service'
 import { DocumentsService } from '../documents/documents.service'
+import { ParentResumeService } from './parent-resume.service'
 
 const finished = new Set(['completed', 'published', 'archived'])
 const closed = new Set(['completed', 'published', 'archived', 'cancelled'])
@@ -19,6 +20,7 @@ export class WorkflowCoordinationService {
     private readonly prisma: PrismaService,
     private readonly access: ResourceAccessService,
     private readonly documents: DocumentsService,
+    private readonly parentResume: ParentResumeService,
   ) {}
 
   private async parent(user: any, id: string, writable = false) {
@@ -70,7 +72,26 @@ export class WorkflowCoordinationService {
       child_document_instance_id: child.id, relation_type: 'subprocess',
     } })
     if (exists) return { relationId: exists.id, alreadyLinked: true }
+    // Capture the unambiguous next activity from the SERVER workflow only.
+    // Without a simple persisted route, links still work but auto-resume remains disabled.
+    let waitingElementId: string | null = null
+    let nextElementId: string | null = null
+    if (waitForCompletion && parent.current_element_id) {
+      const outgoing = await this.prisma.workflow_transitions.findMany({
+        where: { workflow_id: parent.workflow_id, source_element_id: parent.current_element_id },
+      })
+      if (outgoing.length === 1) {
+        const target = await this.prisma.workflow_elements.findFirst({
+          where: { workflow_id: parent.workflow_id, element_id: outgoing[0].target_element_id },
+        })
+        if (target && !/gateway/i.test(target.element_kind ?? '')) {
+          waitingElementId = parent.current_element_id
+          nextElementId = target.element_id
+        }
+      }
+    }
     const relation = await this.prisma.document_relations.create({ data: {
+      parent_waiting_element_id: waitingElementId, parent_next_element_id: nextElementId,
       account_id: user.accountId, parent_document_id: parent.document_id,
       parent_document_instance_id: parent.id, child_document_id: child.document_id,
       child_document_instance_id: child.id, relation_type: 'subprocess',
