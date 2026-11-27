@@ -5,6 +5,8 @@ import { WorkflowAutomationService } from './workflow-automation.service'
 import { automationJobKey, failureDisposition, isNoopAutomation, retryDelayMs } from './automation-job-policy'
 import { WorkflowScheduleService } from './workflow-schedule.service'
 import { WorkflowEventService } from './workflow-event.service'
+import { WorkflowHttpService } from './workflow-http.service'
+import { parseHttpAutomation } from './workflow-http-policy'
 import { planSchedules } from './workflow-schedule-policy'
 import type { ScheduleKind } from './workflow-schedule-policy'
 
@@ -21,6 +23,7 @@ export class WorkflowAutomationQueueService implements OnModuleInit, OnModuleDes
     private readonly parentResume: ParentResumeService,
     @Optional() private readonly schedule?: WorkflowScheduleService,
     @Optional() private readonly events?: WorkflowEventService,
+    @Optional() private readonly http?: WorkflowHttpService,
   ) {}
 
   onModuleInit() {
@@ -84,7 +87,15 @@ export class WorkflowAutomationQueueService implements OnModuleInit, OnModuleDes
       const element = await this.prisma.workflow_elements.findFirst({
         where: { workflow_id: doc.workflow_id, account_id: doc.account_id, element_id: doc.current_element_id! },
       })
-      if (isNoopAutomation(element)) {
+      if (parseHttpAutomation(element)) {
+        const key = automationJobKey(doc.id, doc.current_element_id!) + ':http'
+        await this.prisma.workflow_automation_jobs.upsert({
+          where: { idempotency_key: key }, update: {},
+          create: { account_id: doc.account_id, document_instance_id: doc.id, workflow_id: doc.workflow_id,
+            element_id: doc.current_element_id!, token_id: null, idempotency_key: key, job_kind: 'http', status: 'queued', max_attempts: 5 },
+        })
+        discovered++
+      } else if (isNoopAutomation(element)) {
         await this.register(doc.account_id, doc.id, doc.workflow_id, doc.current_element_id!)
         discovered++
       } else if (element) {
@@ -154,6 +165,10 @@ export class WorkflowAutomationQueueService implements OnModuleInit, OnModuleDes
       where: { id: job.document_instance_id, account_id: job.account_id },
     })
     if (!document || document.workflow_id !== job.workflow_id) return 'skipped'
+    if (job.job_kind === 'http') {
+      if (!this.http) throw new Error('Servico de integracoes HTTP nao configurado.')
+      return this.http.execute(job)
+    }
     if (job.job_kind === 'event') {
       if (!this.events) throw new Error('Motor de eventos nao configurado.')
       return this.events.execute(job)
