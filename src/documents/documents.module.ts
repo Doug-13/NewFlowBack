@@ -16,6 +16,8 @@ import { WorkflowAutomationQueueService } from '../workflow-automation/workflow-
 import { WorkflowScheduleService } from '../workflow-automation/workflow-schedule.service'
 import { WorkflowEventService } from '../workflow-automation/workflow-event.service'
 import { WorkflowEventController } from '../workflow-automation/workflow-event.controller'
+import { WorkflowHttpClient } from '../workflow-automation/workflow-http-client'
+import { WorkflowHttpService } from '../workflow-automation/workflow-http.service'
 import { WorkflowScheduleController } from '../workflow-automation/workflow-schedule.controller'
 import { Module } from '@nestjs/common'
 import { AuthModule } from '../auth/auth.module'
@@ -27,6 +29,6 @@ import { DocumentGovernanceController } from './document-governance.controller'
 @Module({
   imports: [AuthModule],
   controllers: [GrdController,LdImportController,DocumentsController, DocumentGovernanceController, WorkflowCoordinationController, WorkflowTokenRuntimeController, WorkflowAutomationController, WorkflowScheduleController, WorkflowEventController],
-  providers: [GrdService,LdImportService,DocumentNumberingService,ResourceAccessService, ResourceAccessGuard,DocumentsService, DocumentGovernanceService, WorkflowCoordinationService, WorkflowTokenRuntimeService, ParentResumeService, WorkflowAutomationService, WorkflowAutomationQueueService, WorkflowScheduleService, WorkflowEventService],
+  providers: [GrdService,LdImportService,DocumentNumberingService,ResourceAccessService, ResourceAccessGuard,DocumentsService, DocumentGovernanceService, WorkflowCoordinationService, WorkflowTokenRuntimeService, ParentResumeService, WorkflowAutomationService, WorkflowAutomationQueueService, WorkflowScheduleService, WorkflowEventService, WorkflowHttpClient, WorkflowHttpService],
 })
 export class DocumentsModule {}
