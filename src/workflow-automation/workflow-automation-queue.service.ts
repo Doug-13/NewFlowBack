@@ -1,8 +1,11 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { ParentResumeService } from '../workflow-coordination/parent-resume.service'
 import { WorkflowAutomationService } from './workflow-automation.service'
 import { automationJobKey, failureDisposition, isNoopAutomation, retryDelayMs } from './automation-job-policy'
+import { WorkflowScheduleService } from './workflow-schedule.service'
+import { planSchedules } from './workflow-schedule-policy'
+import type { ScheduleKind } from './workflow-schedule-policy'
 
 /** Persisted, opt-in worker. No arbitrary scripts, external HTTP or side effects are executed. */
 @Injectable()
@@ -15,6 +18,7 @@ export class WorkflowAutomationQueueService implements OnModuleInit, OnModuleDes
     private readonly prisma: PrismaService,
     private readonly automation: WorkflowAutomationService,
     private readonly parentResume: ParentResumeService,
+    @Optional() private readonly schedule?: WorkflowScheduleService,
   ) {}
 
   onModuleInit() {
@@ -49,13 +53,24 @@ export class WorkflowAutomationQueueService implements OnModuleInit, OnModuleDes
     })
   }
 
+  private async registerSchedule(accountId: string, documentId: string, workflowId: string,
+    elementId: string, kind: ScheduleKind, availableAt: Date) {
+    const key = `${automationJobKey(documentId, elementId)}:${kind}`
+    await this.prisma.workflow_automation_jobs.upsert({
+      where: { idempotency_key: key }, update: {},
+      create: { account_id: accountId, document_instance_id: documentId, workflow_id: workflowId,
+        element_id: elementId, token_id: null, idempotency_key: key,
+        job_kind: kind, status: 'queued', max_attempts: 5, available_at: availableAt },
+    })
+  }
+
   /** Bounded scan, tenant-scoped when called by the admin endpoint. Re-scans are idempotent. */
   async discover(accountId?: string): Promise<{ discovered: number }> {
     let discovered = 0
     const docs = await this.prisma.document_instances.findMany({
       where: { ...(accountId ? { account_id: accountId } : {}),
         status: { in: ['draft', 'in_progress'] }, current_element_id: { not: null } },
-      select: { id: true, account_id: true, workflow_id: true, current_element_id: true },
+      select: { id: true, account_id: true, workflow_id: true, current_element_id: true, updated_at: true },
       orderBy: { updated_at: 'desc' }, take: 200,
     })
     for (const doc of docs) {
@@ -67,9 +82,16 @@ export class WorkflowAutomationQueueService implements OnModuleInit, OnModuleDes
       const element = await this.prisma.workflow_elements.findFirst({
         where: { workflow_id: doc.workflow_id, account_id: doc.account_id, element_id: doc.current_element_id! },
       })
-      if (!isNoopAutomation(element)) continue
-      await this.register(doc.account_id, doc.id, doc.workflow_id, doc.current_element_id!)
-      discovered++
+      if (isNoopAutomation(element)) {
+        await this.register(doc.account_id, doc.id, doc.workflow_id, doc.current_element_id!)
+        discovered++
+      } else if (element) {
+        // Timers/deadlines are only supported on the single-document path, not on active token branches.
+        for (const plan of planSchedules(element, doc.updated_at)) {
+          await this.registerSchedule(doc.account_id, doc.id, doc.workflow_id, doc.current_element_id!, plan.kind, plan.availableAt)
+          discovered++
+        }
+      }
     }
     const tokens = await this.prisma.workflow_execution_tokens.findMany({
       where: { ...(accountId ? { account_id: accountId } : {}), status: 'active' },
@@ -124,12 +146,16 @@ export class WorkflowAutomationQueueService implements OnModuleInit, OnModuleDes
 
   private async executeJob(job: {
     id: string; account_id: string; document_instance_id: string; workflow_id: string;
-    element_id: string; token_id: string | null
+    element_id: string; token_id: string | null; job_kind: string; idempotency_key: string
   }): Promise<'completed' | 'skipped'> {
     const document = await this.prisma.document_instances.findFirst({
       where: { id: job.document_instance_id, account_id: job.account_id },
     })
     if (!document || document.workflow_id !== job.workflow_id) return 'skipped'
+    if (job.job_kind && job.job_kind !== 'noop') {
+      if (!this.schedule) throw new Error('Servico de agendamentos nao configurado.')
+      return this.schedule.execute(job)
+    }
     const actor = { id: 'system', name: 'NewFlow Automation', role: 'admin', accountId: job.account_id }
     if (job.token_id) {
       const token = await this.prisma.workflow_execution_tokens.findFirst({
@@ -196,7 +222,7 @@ export class WorkflowAutomationQueueService implements OnModuleInit, OnModuleDes
   async list(accountId: string) {
     return this.prisma.workflow_automation_jobs.findMany({
       where: { account_id: accountId }, orderBy: { created_at: 'desc' }, take: 100,
-      select: { id: true, document_instance_id: true, element_id: true, token_id: true,
+      select: { id: true, document_instance_id: true, element_id: true, token_id: true, job_kind: true,
         status: true, attempt_count: true, max_attempts: true, available_at: true,
         finished_at: true, last_error: true, created_at: true },
     })

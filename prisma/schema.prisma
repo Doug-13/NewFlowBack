@@ -764,6 +764,7 @@ model workflow_automation_jobs {
   token_id             String?   @db.Uuid
   idempotency_key      String    @unique(map: "uq_workflow_automation_jobs_idempotency_key")
   status               String    @default("queued") @db.VarChar(20)
+  job_kind             String    @default("noop") @db.VarChar(20)
   attempt_count        Int       @default(0)
   max_attempts         Int       @default(5)
   available_at         DateTime  @default(now()) @db.Timestamp(6)
@@ -777,4 +778,22 @@ model workflow_automation_jobs {
   @@index([account_id, status, available_at], map: "idx_workflow_automation_jobs_account_status")
   @@index([status, available_at], map: "idx_workflow_automation_jobs_claim")
   @@index([document_instance_id], map: "idx_workflow_automation_jobs_document")
+}
+
+// Phase 3B: in-app notifications emitted by the persisted automation queue.
+model workflow_notifications {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  account_id           String    @db.VarChar(100)
+  user_id              String    @db.VarChar(100)
+  document_instance_id String    @db.Uuid
+  element_id           String    @db.VarChar(255)
+  idempotency_key      String    @unique(map: "uq_workflow_notifications_idempotency_key") @db.VarChar(500)
+  kind                 String    @db.VarChar(30)
+  title                String    @db.VarChar(255)
+  message              String
+  is_read              Boolean   @default(false)
+  created_at           DateTime  @default(now()) @db.Timestamp(6)
+  read_at              DateTime? @db.Timestamp(6)
+
+  @@index([account_id, user_id, is_read, created_at(sort: Desc)], map: "idx_workflow_notifications_recipient")
 }
