@@ -9,19 +9,21 @@ type Transition = { source_element_id: string; target_element_id: string }
  * not accept implicit branching, cycles, gateway nesting or early merges.
  * Returns branch activity IDs in execution order (the join is not included).
  */
-export function validateLinearAndBranches(
+export function validateLinearTokenBranches(
   starts: readonly string[],
   joinElementId: string,
   elements: readonly Element[],
   transitions: readonly Transition[],
+  kind: 'parallel' | 'inclusive',
 ): Map<string, string[]> {
-  if (!joinElementId || starts.length < 2 || new Set(starts).size !== starts.length || starts.some(x => !x)) {
-    throw new ConflictException('Gateway AND exige dois ou mais caminhos distintos e um join.')
+  const minimum = kind === 'parallel' ? 2 : 1
+  if (!joinElementId || starts.length < minimum || new Set(starts).size !== starts.length || starts.some(x => !x)) {
+    throw new ConflictException('Gateway exige caminhos distintos e um join valido.')
   }
   const byId = new Map(elements.map(e => [e.element_id, e]))
   const join = byId.get(joinElementId)
-  if (!join || !/parallelgateway/i.test(join.element_kind ?? '')) {
-    throw new ConflictException('Join paralelo AND nao encontrado.')
+  if (!join || !(kind === 'parallel' ? /parallelgateway/i : /inclusivegateway/i).test(join.element_kind ?? '')) {
+    throw new ConflictException('Join nao corresponde ao tipo de fork.')
   }
   const paths = new Map<string, string[]>()
   const globallyVisited = new Set<string>()
@@ -49,4 +51,14 @@ export function validateLinearAndBranches(
     paths.set(start, path)
   }
   return paths
+}
+
+/** Compatibility function for existing AND validators and tests. */
+export function validateLinearAndBranches(
+  starts: readonly string[],
+  joinElementId: string,
+  elements: readonly Element[],
+  transitions: readonly Transition[],
+): Map<string, string[]> {
+  return validateLinearTokenBranches(starts, joinElementId, elements, transitions, 'parallel')
 }
