@@ -10,6 +10,9 @@ import { WorkflowCoordinationService } from '../workflow-coordination/workflow-c
 import { WorkflowTokenRuntimeService } from '../workflow-runtime/workflow-token-runtime.service'
 import { WorkflowTokenRuntimeController } from '../workflow-runtime/workflow-token-runtime.controller'
 import { ParentResumeService } from '../workflow-coordination/parent-resume.service'
+import { WorkflowAutomationService } from '../workflow-automation/workflow-automation.service'
+import { WorkflowAutomationController } from '../workflow-automation/workflow-automation.controller'
+import { WorkflowAutomationQueueService } from '../workflow-automation/workflow-automation-queue.service'
 import { Module } from '@nestjs/common'
 import { AuthModule } from '../auth/auth.module'
 import { DocumentsController } from './documents.controller'
@@ -19,7 +22,7 @@ import { DocumentGovernanceController } from './document-governance.controller'
 
 @Module({
   imports: [AuthModule],
-  controllers: [GrdController,LdImportController,DocumentsController, DocumentGovernanceController, WorkflowCoordinationController, WorkflowTokenRuntimeController],
-  providers: [GrdService,LdImportService,DocumentNumberingService,ResourceAccessService, ResourceAccessGuard,DocumentsService, DocumentGovernanceService, WorkflowCoordinationService, WorkflowTokenRuntimeService, ParentResumeService],
+  controllers: [GrdController,LdImportController,DocumentsController, DocumentGovernanceController, WorkflowCoordinationController, WorkflowTokenRuntimeController, WorkflowAutomationController],
+  providers: [GrdService,LdImportService,DocumentNumberingService,ResourceAccessService, ResourceAccessGuard,DocumentsService, DocumentGovernanceService, WorkflowCoordinationService, WorkflowTokenRuntimeService, ParentResumeService, WorkflowAutomationService, WorkflowAutomationQueueService],
 })
 export class DocumentsModule {}
