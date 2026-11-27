@@ -4,6 +4,7 @@ import { ParentResumeService } from '../workflow-coordination/parent-resume.serv
 import { WorkflowAutomationService } from './workflow-automation.service'
 import { automationJobKey, failureDisposition, isNoopAutomation, retryDelayMs } from './automation-job-policy'
 import { WorkflowScheduleService } from './workflow-schedule.service'
+import { WorkflowEventService } from './workflow-event.service'
 import { planSchedules } from './workflow-schedule-policy'
 import type { ScheduleKind } from './workflow-schedule-policy'
 
@@ -19,6 +20,7 @@ export class WorkflowAutomationQueueService implements OnModuleInit, OnModuleDes
     private readonly automation: WorkflowAutomationService,
     private readonly parentResume: ParentResumeService,
     @Optional() private readonly schedule?: WorkflowScheduleService,
+    @Optional() private readonly events?: WorkflowEventService,
   ) {}
 
   onModuleInit() {
@@ -146,12 +148,16 @@ export class WorkflowAutomationQueueService implements OnModuleInit, OnModuleDes
 
   private async executeJob(job: {
     id: string; account_id: string; document_instance_id: string; workflow_id: string;
-    element_id: string; token_id: string | null; job_kind: string; idempotency_key: string
+    element_id: string; token_id: string | null; job_kind: string; idempotency_key: string; event_id: string | null
   }): Promise<'completed' | 'skipped'> {
     const document = await this.prisma.document_instances.findFirst({
       where: { id: job.document_instance_id, account_id: job.account_id },
     })
     if (!document || document.workflow_id !== job.workflow_id) return 'skipped'
+    if (job.job_kind === 'event') {
+      if (!this.events) throw new Error('Motor de eventos nao configurado.')
+      return this.events.execute(job)
+    }
     if (job.job_kind && job.job_kind !== 'noop') {
       if (!this.schedule) throw new Error('Servico de agendamentos nao configurado.')
       return this.schedule.execute(job)
