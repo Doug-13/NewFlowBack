@@ -6,10 +6,11 @@ import { enforceWorkflowAssignee } from './assignment-access'
 import { authorizeWorkflowAction, chooseWorkflowTransition } from './transition-policy'
 import { planGateway } from './gateway-policy'
 import { decideParallelJoin } from './token-coordination-policy'
+import { validateLinearAndBranches } from './branch-path-policy'
 
 /** Controlled first release of the persisted BPMN token runtime.
  * Activation requires a gateway with a server-stored config.joinElementId.
- * Only one simple fork/join cohort per document is supported; nested forks remain blocked.
+ * One AND fork/join cohort per document, with linear multi-activity branches; nested gateways remain blocked.
  */
 @Injectable()
 export class WorkflowTokenRuntimeService {
@@ -68,13 +69,13 @@ export class WorkflowTokenRuntimeService {
     if (plan.targetElementIds.length < 2 || new Set(plan.targetElementIds).size !== plan.targetElementIds.length) {
       throw new ConflictException('Fork precisa de dois ou mais caminhos distintos.')
     }
-    const incoming = await this.prisma.workflow_transitions.findMany({
-      where: { workflow_id: document.workflow_id, target_element_id: joinElementId },
-    })
-    // Conservative graph check: each branch must have a direct connection to the declared join.
-    if (plan.targetElementIds.some(id => !incoming.some(t => t.source_element_id === id))) {
-      throw new ConflictException('Primeira versao exige uma atividade por ramo, ligada diretamente ao join.')
-    }
+    // Validate the complete linear graph before persisting any tokens.
+    // Nested gateways, cycles, cross-branch merges and ambiguous transitions stay blocked.
+    const [allElements, allTransitions] = await Promise.all([
+      this.prisma.workflow_elements.findMany({ where: { workflow_id: document.workflow_id } }),
+      this.prisma.workflow_transitions.findMany({ where: { workflow_id: document.workflow_id } }),
+    ])
+    validateLinearAndBranches(plan.targetElementIds, joinElementId, allElements, allTransitions)
     return this.prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM document_instances WHERE id = ${documentId}::uuid FOR UPDATE`
       const current = await tx.document_instances.findFirst({where: {id: documentId, account_id: user.accountId}})
@@ -115,15 +116,33 @@ export class WorkflowTokenRuntimeService {
     ])
     const policy = authorizeWorkflowAction(configuredActions, body)
     const selected = chooseWorkflowTransition(transitions, policy.outcome, policy.targetId)
-    if (selected.target_element_id !== token.join_element_id) throw new ConflictException('Esta versao permite apenas ramo direto para o join configurado.')
+    // The branch must remain a valid linear chain. Avoid allowing a mutated
+    // workflow definition to route a token into another branch or a gateway.
+    const [allElements, allTransitions, cohortBefore] = await Promise.all([
+      this.prisma.workflow_elements.findMany({ where: { workflow_id: document.workflow_id } }),
+      this.prisma.workflow_transitions.findMany({ where: { workflow_id: document.workflow_id } }),
+      this.prisma.workflow_execution_tokens.findMany({
+        where: { account_id: user.accountId, document_instance_id: documentId, fork_key: token.fork_key },
+      }),
+    ])
+    const branches = validateLinearAndBranches(cohortBefore.map(t => t.branch_key), token.join_element_id, allElements, allTransitions)
+    const path = branches.get(token.branch_key)
+    const position = path?.indexOf(token.element_id) ?? -1
+    if (position < 0 || selected.target_element_id !== (path![position + 1] ?? token.join_element_id)) {
+      throw new ConflictException('Transicao nao pertence a sequencia validada deste ramo.')
+    }
+    const reachesJoin = selected.target_element_id === token.join_element_id
     return this.prisma.$transaction(async tx => {
       // Serialize all token updates for this document, including concurrent branch completions.
       await tx.$queryRaw`SELECT id FROM document_instances WHERE id = ${documentId}::uuid FOR UPDATE`
       const latest = await tx.document_instances.findFirst({where: {id: documentId, account_id: user.accountId}})
       if (!latest || ['cancelled','completed','published','archived'].includes(latest.status)) throw new ConflictException('Documento encerrado.')
       const updated = await tx.workflow_execution_tokens.updateMany({
-        where: {id: tokenId, document_instance_id: documentId, status: 'active', element_id: token.element_id},
-        data: {status: 'arrived', arrived_at: new Date(), updated_at: new Date()},
+        where: {id: tokenId, account_id: user.accountId, document_instance_id: documentId,
+          status: 'active', element_id: token.element_id},
+        data: reachesJoin
+          ? {status: 'arrived', arrived_at: new Date(), updated_at: new Date()}
+          : {element_id: selected.target_element_id, updated_at: new Date()},
       })
       if (updated.count !== 1) throw new ConflictException('Token ja executado. Atualize a tela.')
       await tx.document_action_history.create({data: {
@@ -132,6 +151,9 @@ export class WorkflowTokenRuntimeService {
         comment: typeof body.comment === 'string' ? body.comment : null,
         executed_by_user_id: user.id, executed_by_user_name: user.name,
       }})
+      if (!reachesJoin) {
+        return { advanced: true, nextElementId: selected.target_element_id, joined: false }
+      }
       const cohort = await tx.workflow_execution_tokens.findMany({
         where: {account_id: user.accountId, document_instance_id: documentId, fork_key: token.fork_key},
       })
